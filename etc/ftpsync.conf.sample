@@ -13,17 +13,17 @@
 ## Destination of the mirrored files. Should be an empty directory.
 ## CAREFUL, this directory will contain the mirror. Everything else
 ## that might have happened to be in there WILL BE GONE after the mirror sync!
-#TO="/srv/mirrors/debian/"
+#TO="/srv/mirrors/kali/"
 
 ## The upstream name of the rsync share.
 ##
 ## You can find out what share names your upstream mirror supports by running
 ## rsync YOURUPSTREAMSERVER::
 ## (You might have to export RSYNC_USER/RSYNC_PASSWORD for this to work)
-#RSYNC_PATH="debian"
+#RSYNC_PATH="kali"
 
 ## The host we mirror from
-#RSYNC_HOST=some.mirror.debian.org
+#RSYNC_HOST=archive.kali.org
 
 ## In case we need a user to access the rsync share at our upstream host
 #RSYNC_USER=

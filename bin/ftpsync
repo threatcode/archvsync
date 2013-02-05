@@ -243,7 +243,7 @@ LOGDIR=${LOGDIR:-"${BASEDIR}/log"}
 LOG=${LOG:-"${LOGDIR}/${NAME}.log"}
 
 # Where should we put all the mirrored files?
-TO=${TO:-"/srv/mirrors/debian/"}
+TO=${TO:-"/srv/mirrors/kali/"}
 
 # used by log() and error()
 PROGRAM=${PROGRAM:-"${NAME}-$(hostname -s)"}
@@ -297,7 +297,7 @@ RSYNC_OPTIONS1=${RSYNC_OPTIONS1:-"--exclude=Packages* --exclude=Sources* --exclu
 # Options for the second pass, where we do want everything, including deletion of old and now unused files
 RSYNC_OPTIONS2=${RSYNC_OPTIONS2:-"--max-delete=40000 --delay-updates --delete --delete-after --delete-excluded"}
 # Which rsync share to use on our upstream mirror?
-RSYNC_PATH=${RSYNC_PATH:-"debian"}
+RSYNC_PATH=${RSYNC_PATH:-"kali"}
 
 # Extra rsync options as defined by the admin locally. Won't be set
 # to any default by ftpsync. Those will be added to EACH AND EVERY rsync call.
