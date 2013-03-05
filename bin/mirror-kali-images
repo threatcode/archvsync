@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -e
+cd $(dirname $0)/..
+err=0
+
+. etc/common
+
+if [ -e etc/mirror-kali-images.conf ]; then
+	. etc/mirror-kali-images.conf
+else
+	echo "ERROR: please configure script with etc/mirror-kali-images.conf" >&2
+	echo "you can start with etc/mirror-kali-images.conf.sample" >&2
+	exit 1
+fi
+
+# Default values
+RSYNC_HOST=${RSYNC_HOST:-archive.kali.org}
+RSYNC_PATH=${RSYNC_PATH:-kali-images}
+RSYNC_OPTIONS=${RSYNC_OPTIONS:-"--bwlimit=0 -prltvHSB8192 --timeout 3600 --stats --delay-updates --delete --delete-after"}
+LOGROTATE=${LOGROTATE:-14}
+
+if [ -z "$TO" ]; then
+	echo "ERROR: TO variable must be set in etc/mirror-kali-images.conf" >&2
+	exit 1
+fi
+
+if [ -n "$RSYNC_USER" ]; then
+	RSYNC_URL="$RSYNC_USER@$RSYNC_HOST::$RSYNC_PATH"
+	export RSYNC_PASSWORD
+else
+	RSYNC_URL="$RSYNC_HOST::$RSYNC_PATH"
+fi
+
+rsync $RSYNC_OPTIONS $RSYNC_URL $TO \
+      >log/rsync-kali-images.log 2>log/rsync-kali-images.error || err=$?
+
+if [ "$err" -ne "0" ]; then
+        echo "ERROR: rsync archive.kali.org@repo.kali.org::kali-images failed" >&2
+        echo "See $(pwd)/log/rsync-kali-images.error.0 for details" >&2
+fi
+
+savelog log/rsync-kali-images.log
+savelog log/rsync-kali-images.error
+
