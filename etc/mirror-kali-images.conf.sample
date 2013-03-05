@@ -8,5 +8,9 @@
 #RSYNC_HOST="archive.kali.org"
 #RSYNC_PATH="kali-images"
 
+## Rsync authentication if needed
+#RSYNC_USER=""
+#RSYNC_PASSWORD=""
+
 ## Rsync options
 #RSYNC_OPTIONS="--bwlimit=0 -prltvHSB8192 --timeout 3600 --stats --delay-updates --delete --delete-after"
