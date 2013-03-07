@@ -36,7 +36,7 @@ rsync $RSYNC_OPTIONS $RSYNC_URL $TO \
       >log/rsync-kali-images.log 2>log/rsync-kali-images.error || err=$?
 
 if [ "$err" -ne "0" ]; then
-        echo "ERROR: rsync archive.kali.org@repo.kali.org::kali-images failed" >&2
+        echo "ERROR: rsync $RSYNC_URL $TO failed" >&2
         echo "See $(pwd)/log/rsync-kali-images.error.0 for details" >&2
 fi
 
