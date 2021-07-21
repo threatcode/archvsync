@@ -7,7 +7,7 @@
 ########################################################################
 
 # MIRRORNAME=`hostname -f`
-# TO="/srv/mirrors/debian/"
+# TO="/srv/mirrors/kali/"
 # MAILTO="$LOGNAME"
 # HUB=false
 
@@ -15,8 +15,8 @@
 ## Connection options
 ########################################################################
 
-RSYNC_HOST=
-RSYNC_PATH="debian"
+# RSYNC_HOST=archive.kali.org
+# RSYNC_PATH="kali"
 # RSYNC_USER=
 # RSYNC_PASSWORD=
 
