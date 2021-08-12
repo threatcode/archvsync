@@ -1,13 +1,10 @@
-#! /bin/bash
-
-set -e
-set -u
+#!/usr/bin/env bash
 
 # runmirrors script for Debian
 # Based losely on existing scripts, written by an unknown number of
 # different people over the years.
 #
-# Copyright (C) 2008, 2009 Joerg Jaspert <joerg@debian.org>
+# Copyright (C) 2008-2016 Joerg Jaspert <joerg@debian.org>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as
@@ -22,13 +19,15 @@ set -u
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-# In case the admin somehow wants to have this script located someplace else,
-# he can set BASEDIR, and we will take that. If it is unset we take ${HOME}
-BASEDIR=${BASEDIR:-"${HOME}"}
+set -e
+set -u
+set -o pipefail
+
+BINDIR=$(dirname $(readlink -f "$0")); . "${BINDIR}/include-git" ## INCLUDE COMMON
 
 NAME="$(basename $0)"
 
-HELP="$0, (C) 2008, 2009 by Joerg Jaspert <joerg@debian.org>\n
+HELP="$0\n
 Usage:\n\n
 
 1.) a single parameter with NO leading -.\n
@@ -44,27 +43,27 @@ Usage:\n\n
 # If we got options, lets see if we use newstyle options, or oldstyle. If oldstyle
 # it will not start with a -. If we find oldstyle we assume its only one, the config
 # name we run on.
-if [ $# -gt 0 ]; then
-    if [ "x${1:0:1}x" != "x-x" ]; then
+if [[ $# -gt 0 ]]; then
+    if [[ ${1:0:1} != - ]]; then
         # Yes, does not start with a -, so use it for the config name.
         CONF=${1:-""}
-        if [ -n "${CONF}" ]; then
+        if [[ -n ${CONF} ]]; then
             NAME="${NAME}-${CONF}"
         fi
     else
         # Yeah well, new style, starting with - for getopts
         while getopts ':a:k:fh' OPTION ; do
             case $OPTION in
-                a)	CONF="${OPTARG}"
-                    if [ -n "${CONF}" ]; then
+                a)  CONF="${OPTARG}"
+                    if [[ -n ${CONF} ]]; then
                         NAME="${NAME}-${CONF}"
                     fi
                     ;;
-                k)	PUSHKIND="${OPTARG}"
+                k)  PUSHKIND="${OPTARG}"
                     ;;
-                f)	FROMFTPSYNC="true"
+                f)  FROMFTPSYNC="true"
                     ;;
-                h)	echo -e $HELP
+                h)  echo -e $HELP
                     exit 0
                     ;;
 
@@ -91,50 +90,52 @@ FROMFTPSYNC=${FROMFTPSYNC:-"false"}
 
 ########################################################################
 # Read our config file
-. "${BASEDIR}/etc/${NAME}.conf"
+read_config "${NAME}.conf"
 
-# Source our common functions
-. "${BASEDIR}/etc/common"
+# Make sure we have our log and lock directories
+create_logdir
+create_lockdir
 
-# Set sane defaults if the configfile didn't do that for us.
-# The directory for our logfiles
-LOGDIR=${LOGDIR:-"${BASEDIR}/log"}
-# Our own logfile
-LOG=${LOG:-"${LOGDIR}/${NAME}.log"}
-# Our lockfile directory
-LOCKDIR=${LOCKDIR:-"${BASEDIR}/locks"}
-# How many logfiles to keep
-LOGROTATE=${LOGROTATE:-14}
-# Our mirrorfile
-MIRRORS=${MIRRORS:-"${BASEDIR}/etc/${NAME}.mirror"}
-# used by log()
-PROGRAM=${PROGRAM:-"${NAME}-$(hostname -s)"}
-# extra ssh options we might want hostwide
-SSH_OPTS=${SSH_OPTS:-"-o StrictHostKeyChecking=no"}
-# Whats our archive name? We will also tell our leafs about it
-PUSHARCHIVE=${PUSHARCHIVE:-"${CONF}"}
-# How long to wait for mirrors to do stage1 if we have multi-stage syncing
-PUSHDELAY=${PUSHDELAY:-600}
-# Which ssh key to use?
+########################################################################
+# Config defaults                                                      #
+########################################################################
+MAILTO=${MAILTO:-${LOGNAME:?Environment variable LOGNAME unset, please check your system or specify MAILTO}}
 KEYFILE=${KEYFILE:-".ssh/pushmirror"}
-# where to send mails to
-if [ "x$(hostname -d)x" != "xdebian.orgx" ]; then
-    # We are not on a debian.org host
-    MAILTO=${MAILTO:-"root"}
-else
-    # Yay, on a .debian.org host
-    MAILTO=${MAILTO:-"mirrorlogs@debian.org"}
-fi
 
-if ! [ -f "${BASEDIR}/${KEYFILE}" ]; then
-    error "SSH Key ${BASEDIR}/${KEYFILE} does not exist" >> "${LOG}"
-    exit 5
-fi
+# Log options
+LOG=${LOG:-"${LOGDIR}/${NAME}.log"}
+LOGROTATE=${LOGROTATE:-14}
+
+# Other options
+MIRRORS=${MIRRORS:-$(search_config "${NAME}.mirror")}
+SSH_OPTS=${SSH_OPTS:-"-o StrictHostKeyChecking=no"}
+PUSHARCHIVE=${PUSHARCHIVE:-"${CONF}"}
+PUSHDELAY=${PUSHDELAY:-600}
 
 # Hooks
 HOOK1=${HOOK1:-""}
 HOOK2=${HOOK2:-""}
 HOOK3=${HOOK3:-""}
+########################################################################
+########################################################################
+
+# Which ssh key to use?
+KEYFILE_ABS=$(cd && readlink -f "$KEYFILE" || :)
+
+# used by log()
+PROGRAM=${PROGRAM:-"${NAME}"}
+
+REGEX_URL='^([a-z.+]+)://(([^@/]+)@)?([^/]+)(/.*)?$'
+
+# start a new log
+savelog "${LOG}" > /dev/null
+
+if ! [[ -f ${KEYFILE_ABS} ]]; then
+    error "SSH Key ${KEYFILE} does not exist" >> "${LOG}"
+    exit 5
+fi
+
+# Hooks
 
 ########################################################################
 
@@ -142,13 +143,11 @@ HOOK3=${HOOK3:-""}
 cd "${BASEDIR}"
 umask 022
 
-# Make sure we have our log and lock directories
-mkdir -p "${LOGDIR}"
-mkdir -p "${LOCKDIR}"
+open_log $LOG
 
-trap 'log "Mirrorpush done" >> "${LOG}"; savelog "${LOG}" > /dev/null' EXIT
+trap 'log "Mirrorpush done"' EXIT
 
-log "Pushing leaf mirrors. Inside ftpsync: ${FROMFTPSYNC}. Pushkind: ${PUSHKIND}" >> "${LOG}"
+log "Pushing leaf mirrors. Inside ftpsync: ${FROMFTPSYNC}. Pushkind: ${PUSHKIND}"
 
 HOOK=(
     HOOKNR=1
@@ -169,25 +168,54 @@ rm -f "${LOCKDIR}/all_stage1"
 
 # Now read our mirrorfile and push the mirrors defined in there.
 # We use grep to easily sort out all lines having a # in front of them or are empty.
-egrep -v '^[[:space:]]*(#|$)' "${MIRRORS}" |
+egrep -vs '^[[:space:]]*(#|$)' "${MIRRORS}" |
 while read MTYPE MLNAME MHOSTNAME MUSER MSSHOPT; do
-    if [ "x${MTYPE}x" = "xDELAYx" ]; then
+    if [[ ${MTYPE} = DELAY ]]; then
         # We should wait a bit.
         if [ -z ${MLNAME} ]; then
             MLNAME=600
         fi
-        log "Delay of ${MLNAME} requested, sleeping" >> "${LOG}"
-        sleep ${MLNAME}
+        if [ "${MHOSTNAME:-}" = "stage1" ]; then
+            log "Delay of ${MLNAME} or until staging is finished requested"
+            if ! wait_for_pushlocks ${MLNAME}; then
+                log "Staged delay ran into timeout of ${MLNAME} seconds"
+            else
+                log "Staged delay finished"
+            fi
+        else
+            log "Delay of ${MLNAME} requested, sleeping"
+            sleep ${MLNAME}
+        fi
         continue
     fi
 
     # If we are told we have a mhop sync to do and are called from within ftpsync,
     # we will only look at staged/mhop entries and ignore the rest.
-    if [ "x${PUSHKIND}x" = "xmhopx" ] && [ "x${FROMFTPSYNC}x" = "xtruex" ]; then
-        if [ "x${MTYPE}x" != "xstagedx" ] && [ "x${MTYPE}x" != "xmhopx" ]; then
+    if [[ ${PUSHKIND} = mhop ]] && [[ ${FROMFTPSYNC} = true ]]; then
+        if [[ ${MTYPE} != staged ]] && [[ ${MTYPE} != mhop ]]; then
             continue
         fi
     fi
+
+    MPROTO=2
+    MKEYFILE="${KEYFILE_ABS}"
+    SSHOPT=""
+    MPUSHARCHIVE=${PUSHARCHIVE}
+
+    if [[ $MHOSTNAME =~ $REGEX_URL ]]; then
+        MSCHEME=${BASH_REMATCH[1]}
+        MUSER=${BASH_REMATCH[3]}
+        MHOSTNAME=${BASH_REMATCH[4]}
+        URLPATH=${BASH_REMATCH[5]}
+
+        if [[ $MSCHEME == ssh+ftpsync ]]; then
+            if [[ $URLPATH ]]; then
+                MPUSHARCHIVE=${URLPATH#/}
+            fi
+        else
+            log "Trigger ${MLNAME}: ${MHOSTNAME} have wrong scheme, ignoring"
+            continue
+        fi
 
     # Now, MSSHOPT may start with a -. In that case the whole rest of the line is taken
     # as a set of options to give to ssh, we pass it without doing anything with it.
@@ -204,27 +232,21 @@ while read MTYPE MLNAME MHOSTNAME MUSER MSSHOPT; do
     #
     # The only sane way to go around this, i think, is by dropping backward compability.
     # Which I don't really like.
-    if [ -n "${MSSHOPT}" ]; then
+    elif [[ -n ${MSSHOPT} ]]; then
         # So its not empty, lets check if it starts with a - and as such is a "new-style"
         # ssh options set.
-        if [ "x${MSSHOPT:0:1}x" = "x-x" ]; then
+        if [[ ${MSSHOPT:0:1} = - ]]; then
             # Yes we start with a -
             SSHOPT="${MSSHOPT}"
             MPROTO="99"
-            MKEYFILE="${BASEDIR}/${KEYFILE}"
-        elif [ ${MSSHOPT:0:1} -eq 1 ] || [ ${MSSHOPT:0:1} -eq 2 ]; then
+        elif [[ ${MSSHOPT:0:1} -eq 1 ]] || [[ ${MSSHOPT:0:1} -eq 2 ]]; then
             # We do seem to have oldstyle options here.
             MPROTO=${MSSHOPT:0:1}
             MKEYFILE=${MSSHOPT:2}
-            SSHOPT=""
         else
             error "I don't know what is configured for mirror ${MLNAME}"
             continue
         fi
-    else
-        MPROTO=2
-        MKEYFILE="${BASEDIR}/${KEYFILE}"
-        SSHOPT=""
     fi
 
     # Built our array
@@ -237,15 +259,15 @@ while read MTYPE MLNAME MHOSTNAME MUSER MSSHOPT; do
         SSHOPTS="${SSHOPT/ /#}"
         PUSHLOCKOWN="${LOCKDIR}/${MLNAME}.stage1"
         PUSHTYPE="${MTYPE}"
-        PUSHARCHIVE=${PUSHARCHIVE}
+        PUSHARCHIVE=${MPUSHARCHIVE}
         PUSHKIND=${PUSHKIND}
         FROMFTPSYNC=${FROMFTPSYNC}
     )
 
     # And finally, push the mirror
-    log "Trigger ${MLNAME}" >> "${LOG}"
+    log "Trigger ${MLNAME}"
     signal "${SIGNAL_OPTS}" &
-    log "Trigger for ${MLNAME} done" >> "${LOG}"
+    log "Trigger for ${MLNAME} done"
 
     HOOK=(
         HOOKNR=2
@@ -261,18 +283,18 @@ done
 # As the signal routine touches $LOCKDIR/all_stage1 when all are done, its
 # easy enough just to wait for that to appear. Of course we do the same game
 # with PUSHDELAY to not wait forever.
-if [ "xtruex" = "x${FROMFTPSYNC}x" ] && [ "xmhopx" = "x${PUSHKIND}x" ]; then
+if [[ true = ${FROMFTPSYNC} ]] && [[ mhop = ${PUSHKIND} ]]; then
     tries=0
     # We do not wait forever
-    while [ ${tries} -lt ${PUSHDELAY} ]; do
-        if [ -f "${LOCKDIR}/all_stage1" ]; then
+    while [[ ${tries} -lt ${PUSHDELAY} ]]; do
+        if [[ -f ${LOCKDIR}/all_stage1 ]]; then
             break
         fi
-        tries=$((tries + 5))
+        tries=$(( tries + 5 ))
         sleep 5
     done
 
-    if [ ${tries} -ge ${PUSHDELAY} ]; then
+    if [[ ${tries} -ge ${PUSHDELAY} ]]; then
         error "Failed to wait for our mirrors when sending mhop push down." >> "${LOG}"
     fi
 fi
