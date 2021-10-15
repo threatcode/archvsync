@@ -1,4 +1,4 @@
-archvsync (20180514) UNRELEASED; urgency=low
+archvsync (20211015) UNRELEASED; urgency=low
 
   [ Debian Janitor ]
   * Bump debhelper from old 10 to 12.
@@ -8,6 +8,9 @@ archvsync (20180514) UNRELEASED; urgency=low
   [ Peter Palfrader ]
   * update ftpsync-cron manpage and replace %% with \%.
     %% is a newline, \% a percent sign in crontabs.
+
+  [ Raphaël Hertzog ]
+  * Update version
 
  -- Debian Janitor <janitor@jelmer.uk>  Sat, 27 Jun 2020 03:15:15 -0000
 
