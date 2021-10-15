@@ -63,3 +63,14 @@ install-tar:
 
 clean:
 	rm -f $(ALL)
+
+.PHONY: kali-tarball
+kali-tarball:
+	$(MAKE) all
+	rm -rf debian/kali-tarball
+	$(MAKE) install-tar DESTDIR=debian/kali-tarball
+	install -D -m644 -t debian/kali-tarball/etc etc/mirror-kali-images.conf.sample
+	install -D -m755 -t debian/kali-tarball/bin bin/mirror-kali-images
+	install -d debian/kali-tarball/log
+	cd debian/kali-tarball && tar --sort=name --owner=root:0 --group=root:0 -zcf ../../ftpsync.tar.gz *
+	rm -rf debian/kali-tarball
