@@ -4,7 +4,19 @@ set -e
 cd $(dirname $0)/..
 err=0
 
-. etc/common
+# Rotate logfiles
+savelog() {
+    torotate="$1"
+    count=${2:-${LOGROTATE}}
+    while [ ${count} -gt 0 ]; do
+        prev=$(( count - 1 ))
+        if [ -e "${torotate}.${prev}" ]; then
+            mv "${torotate}.${prev}" "${torotate}.${count}"
+        fi
+        count=$prev
+    done
+    mv "${torotate}" "${torotate}.0"
+}
 
 if [ -e etc/mirror-kali-images.conf ]; then
 	. etc/mirror-kali-images.conf

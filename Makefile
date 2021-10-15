@@ -66,7 +66,7 @@ clean:
 
 .PHONY: kali-tarball
 kali-tarball:
-	$(MAKE) all
+	$(MAKE) clean all
 	rm -rf debian/kali-tarball
 	$(MAKE) install-tar DESTDIR=debian/kali-tarball
 	install -D -m644 -t debian/kali-tarball/etc etc/mirror-kali-images.conf.sample
