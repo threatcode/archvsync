@@ -1,4 +1,4 @@
-archvsync (20211015) UNRELEASED; urgency=low
+archvsync (20220401) UNRELEASED; urgency=low
 
   [ Debian Janitor ]
   * Bump debhelper from old 10 to 12.
