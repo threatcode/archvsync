@@ -69,18 +69,20 @@ else
 fi
 
 # Prepare before running
+LOG_FILE=log/rsync-"$COMPONENT".log
+ERROR_FILE=log/rsync-"$COMPONENT".error
 mkdir -p log
 
 # Run the sync
 rsync $RSYNC_OPTIONS $RSYNC_URL $TO \
-      >log/rsync-kali-images.log 2>log/rsync-kali-images.error || err=$?
+      >"$LOG_FILE" 2>"$ERROR_FILE" || err=$?
 
 if [ "$err" -ne "0" ]; then
         echo "ERROR: rsync $RSYNC_URL $TO failed" >&2
-        echo "See $(pwd)/log/rsync-kali-images.error.0 for details" >&2
+        echo "See $(pwd)/$ERROR_FILE.0 for details" >&2
 fi
 
-savelog log/rsync-kali-images.log
-savelog log/rsync-kali-images.error
+savelog "$LOG_FILE"
+savelog "$ERROR_FILE"
 
 exit $err
