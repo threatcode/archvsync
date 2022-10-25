@@ -55,3 +55,4 @@ fi
 savelog log/rsync-kali-images.log
 savelog log/rsync-kali-images.error
 
+exit $err
