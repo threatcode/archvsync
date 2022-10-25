@@ -18,10 +18,34 @@ savelog() {
     mv "${torotate}" "${torotate}.0"
 }
 
-if [ -e etc/mirror-kali-images.conf ]; then
-	. etc/mirror-kali-images.conf
+# Get component from command-line
+get_component() {
+    comp=
+    # consider 1st arg from either command-line or ssh original command
+    if [ $# -gt 0 ]; then
+        comp="$1"
+    elif [ -n "$SSH_ORIGINAL_COMMAND" ]; then
+        comp=$(echo "$SSH_ORIGINAL_COMMAND" | cut -d" " -f1)
+    fi
+    # only alphanumeric characters, underscore and dash are allowed
+    if echo "$comp" | grep -q "[^-_[:alnum:]]"; then
+        echo "ERROR: unallowed characters in component, discarding" >&2
+        comp=
+    fi
+    # default to kali-images
+    if [ -z "$comp" ]; then
+        comp=kali-images
+    fi
+    echo $comp
+}
+COMPONENT=$(get_component "$@")
+
+# Load config file
+CONFIG_FILE=etc/mirror-"$COMPONENT".conf
+if [ -e "$CONFIG_FILE" ]; then
+	. "$CONFIG_FILE"
 else
-	echo "ERROR: please configure script with etc/mirror-kali-images.conf" >&2
+	echo "ERROR: configuration file $CONFIG_FILE doesn't exist" >&2
 	echo "you can start with etc/mirror-kali-images.conf.sample" >&2
 	exit 1
 fi
@@ -33,7 +57,7 @@ RSYNC_OPTIONS=${RSYNC_OPTIONS:-"--bwlimit=0 -prltvHSB8192 --timeout 3600 --stats
 LOGROTATE=${LOGROTATE:-14}
 
 if [ -z "$TO" ]; then
-	echo "ERROR: TO variable must be set in etc/mirror-kali-images.conf" >&2
+	echo "ERROR: TO variable must be set in $CONFIG_FILE" >&2
 	exit 1
 fi
 
