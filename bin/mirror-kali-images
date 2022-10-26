@@ -44,6 +44,10 @@ else
 	RSYNC_URL="$RSYNC_HOST::$RSYNC_PATH"
 fi
 
+# Prepare before running
+mkdir -p log
+
+# Run the sync
 rsync $RSYNC_OPTIONS $RSYNC_URL $TO \
       >log/rsync-kali-images.log 2>log/rsync-kali-images.error || err=$?
 
