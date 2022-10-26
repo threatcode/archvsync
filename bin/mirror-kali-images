@@ -69,15 +69,24 @@ else
 fi
 
 # Prepare before running
+LOCK_FILE=locks/$(basename "${CONFIG_FILE%.*}")
+mkdir -p locks
 LOG_FILE=log/rsync-"$COMPONENT".log
 ERROR_FILE=log/rsync-"$COMPONENT".error
 mkdir -p log
 
-# Run the sync
-rsync $RSYNC_OPTIONS $RSYNC_URL $TO \
-      >"$LOG_FILE" 2>"$ERROR_FILE" || err=$?
+# Take a lock and run the sync, or fail if the lock is already taken
+(
+	command -v flock >/dev/null && FLOCK=flock || FLOCK=true
+	$FLOCK -x -n 9 || exit 123
+	rsync $RSYNC_OPTIONS $RSYNC_URL $TO >"$LOG_FILE" 2>"$ERROR_FILE"
+) 9>"$LOCK_FILE" || err=$?
 
-if [ "$err" -ne "0" ]; then
+if [ "$err" -eq "123" ]; then
+	echo "ERROR: failed to acquire the lock $LOCK_FILE" >&2
+	echo "Is another instance already running?" >&2
+	exit 1
+elif [ "$err" -ne "0" ]; then
         echo "ERROR: rsync $RSYNC_URL $TO failed" >&2
         echo "See $(pwd)/$ERROR_FILE.0 for details" >&2
 fi
