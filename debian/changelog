@@ -1,4 +1,4 @@
-archvsync (20220401) UNRELEASED; urgency=low
+archvsync (20221027) UNRELEASED; urgency=low
 
   [ Debian Janitor ]
   * Bump debhelper from old 10 to 12.
@@ -10,6 +10,9 @@ archvsync (20220401) UNRELEASED; urgency=low
     %% is a newline, \% a percent sign in crontabs.
 
   [ Raphaël Hertzog ]
+  * Update version
+
+  [ Arnaud Rebillout ]
   * Update version
 
  -- Debian Janitor <janitor@jelmer.uk>  Sat, 27 Jun 2020 03:15:15 -0000
